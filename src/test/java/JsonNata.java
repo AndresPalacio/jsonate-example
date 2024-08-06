@@ -1,11 +1,10 @@
 import com.api.jsonata4java.expressions.EvaluateException;
 import com.api.jsonata4java.expressions.Expressions;
 import com.api.jsonata4java.expressions.ParseException;
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.example.DynamicFields;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -19,7 +18,7 @@ public class JsonNata {
 
     private final ObjectMapper objectMapper;
 
-    public static final String COMPLEX_EXPRESSION_JSONATA = "{ \"name_first\": name, \"age_example\": age }";
+    public static final String COMPLEX_EXPRESSION_JSONATA = "{ \"name_first\": name, \"age_example\": age, \"someField\": someField }";
 
     public JsonNata() {
         this.objectMapper = new ObjectMapper();
@@ -58,22 +57,27 @@ public class JsonNata {
     }
 
     class Person {
+        @DynamicFields
         public final String name;
+
+        @DynamicFields
         public final int age;
 
-        public Person (String name, int age) {
+        public final int someField = 10;
+
+        public Person(String name, int age) {
             this.name = name;
             this.age = age;
         }
-
     }
-
 
     public static List<Field> getAllFields(Class<?> clazz) {
         List<Field> fields = new ArrayList<>();
         while (clazz != null) {
             for (Field field : clazz.getDeclaredFields()) {
-                fields.add(field);
+                if (field.isAnnotationPresent(DynamicFields.class)) {
+                    fields.add(field);
+                }
             }
             clazz = clazz.getSuperclass();
         }
@@ -116,6 +120,7 @@ public class JsonNata {
 
         return fieldMap;
     }
+
     public static JsonNode createJsonTree(Map<String, Object> map) {
         ObjectMapper mapper = new ObjectMapper();
         mapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
@@ -129,6 +134,7 @@ public class JsonNata {
         map.forEach((key, value) -> rootNode.set(key, mapper.valueToTree(value)));
         return rootNode;
     }
+
     @Test
     public void test01() {
         Person person = new Person("Elvis", 120);
